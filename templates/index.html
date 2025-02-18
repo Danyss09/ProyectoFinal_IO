@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Programming Solver</title>
+</head>
+<body>
+    <h1>Linear Programming Solver</h1>
+    
+    <!-- Formulario para enviar datos al endpoint solve_linear -->
+    <form id="linearForm">
+        <label for="objective">Objective (max/min):</label>
+        <input type="text" name="objective" id="objective" required><br><br>
+
+        <label for="variables">Variables (comma-separated, e.g. x1,x2):</label>
+        <input type="text" name="variables" id="variables" required><br><br>
+
+        <label for="objective_coeffs">Objective Coefficients (comma-separated, e.g. 5,6):</label>
+        <input type="text" name="objective_coeffs" id="objective_coeffs" required><br><br>
+
+        <!-- Restricción 1 -->
+        <h3>Constraint 1</h3>
+        <label for="coeffs1">Coefficients (comma-separated):</label>
+        <input type="text" name="coeffs1" id="coeffs1" required><br>
+
+        <label for="sign1">Sign (<=, >=, =):</label>
+        <input type="text" name="sign1" id="sign1" required><br>
+
+        <label for="rhs1">Right-hand side:</label>
+        <input type="number" name="rhs1" id="rhs1" required><br><br>
+
+        <!-- Restricción 2 -->
+        <h3>Constraint 2</h3>
+        <label for="coeffs2">Coefficients (comma-separated):</label>
+        <input type="text" name="coeffs2" id="coeffs2" required><br>
+
+        <label for="sign2">Sign (<=, >=, =):</label>
+        <input type="text" name="sign2" id="sign2" required><br>
+
+        <label for="rhs2">Right-hand side:</label>
+        <input type="number" name="rhs2" id="rhs2" required><br><br>
+
+        <button type="submit">Solve</button>
+    </form>
+
+    <!-- Mostrar resultados si están disponibles -->
+    <div id="solutionResult"></div>
+
+    <script>
+    document.getElementById('linearForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const data = {
+            objective: document.getElementById('objective').value,
+            variables: document.getElementById('variables').value.split(','),
+            objective_coeffs: document.getElementById('objective_coeffs').value.split(',').map(Number),
+            constraints: [
+                {
+                    coeffs: document.getElementById('coeffs1').value.split(',').map(Number),
+                    sign: document.getElementById('sign1').value,
+                    rhs: Number(document.getElementById('rhs1').value)
+                },
+                {
+                    coeffs: document.getElementById('coeffs2').value.split(',').map(Number),
+                    sign: document.getElementById('sign2').value,
+                    rhs: Number(document.getElementById('rhs2').value)
+                }
+            ]
+        };
+
+        // Realizamos la solicitud fetch para resolver el problema
+        fetch('http://127.0.0.1:5000/solve_linear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log(result);  // Verifica lo que recibes en la respuesta
+            if (result && result.solution) {
+                let solutionHTML = `
+                    <h2>Solution</h2>
+                    <p><strong>Status:</strong> ${result.solution.status}</p>
+                    <p><strong>Objective Value:</strong> ${result.solution.objective_value}</p>
+                    <h3>Variable Values:</h3>
+                    <ul>
+                `;
+
+                for (const [varName, value] of Object.entries(result.solution.variable_values)) {
+                    solutionHTML += `<li>${varName}: ${value}</li>`;
+                }
+
+                solutionHTML += '</ul>';
+
+                // Mostrar el análisis de sensibilidad si está disponible
+                if (result.sensitivity) {
+                    solutionHTML += `<h2>Sensitivity Analysis</h2><ul>`;
+                    for (const [varName, value] of Object.entries(result.sensitivity)) {
+                        solutionHTML += `<li>${varName}: ${value}</li>`;
+                    }
+                    solutionHTML += '</ul>';
+                }
+
+                document.getElementById('solutionResult').innerHTML = solutionHTML;
+            } else {
+                console.error('Solution or Sensitivity data is missing!');
+                document.getElementById('solutionResult').innerHTML = 'No solution found or data is incomplete.';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('solutionResult').innerHTML = 'Error solving the linear programming problem.';
+        });
+    });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+Flask
+pulp
+scipy
+networkx
+numpy
