@@ -7,16 +7,12 @@ linear_solver_bp = Blueprint('linear_solver', __name__)
 
 @linear_solver_bp.route('/solve_linear', methods=['POST'])
 def solve_linear():
-    data = request.json  # Obtenemos los datos enviados desde el formulario
-    
+    data = request.json  
     errors = validate_linear_problem(data)
     if errors:
         return jsonify({"error": errors}), 400
     
-    solution = solve_linear_problem(data)
+    solution = solve_linear_problem(data)  # Ahora acepta el método
     sensitivity = analyze_sensitivity(data, solution)
-
-    # Pasamos la solución y el análisis de sensibilidad al template
-   # return render_template('index.html', solution=solution, sensitivity=sensitivity)
 
     return jsonify({"solution": solution, "sensitivity": sensitivity})

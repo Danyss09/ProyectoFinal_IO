@@ -10,64 +10,127 @@
     
     <!-- Formulario para enviar datos al endpoint solve_linear -->
     <form id="linearForm">
+        <!-- Método de solución -->
+        <label for="method">Solution Method:</label>
+        <select name="method" id="method">
+            <option value="simplex">Simplex</option>
+            <option value="two_phase">Two-Phase Method</option>
+            <option value="big_m">Big M Method</option>
+            <option value="dual">Dual Method</option>
+        </select><br><br>
+
+        <!-- Objetivo: Maximizar o Minimizar -->
         <label for="objective">Objective (max/min):</label>
-        <input type="text" name="objective" id="objective" required><br><br>
+        <select name="objective" id="objective">
+            <option value="max">Max</option>
+            <option value="min">Min</option>
+        </select><br><br>
+
+        <!-- Función Objetivo -->
+        <label for="objective_coeffs">Objective Coefficients (e.g. 5,6):</label>
+        <div>
+            <input type="text" name="objective_coeffs" id="objective_coeffs" required><br><br>
+        </div>
 
         <label for="variables">Variables (comma-separated, e.g. x1,x2):</label>
         <input type="text" name="variables" id="variables" required><br><br>
 
-        <label for="objective_coeffs">Objective Coefficients (comma-separated, e.g. 5,6):</label>
-        <input type="text" name="objective_coeffs" id="objective_coeffs" required><br><br>
+        <!-- Agregar restricciones dinámicamente -->
+        <div id="constraints">
+            <!-- Aquí se agregarán las restricciones dinámicamente -->
+        </div>
 
-        <!-- Restricción 1 -->
-        <h3>Constraint 1</h3>
-        <label for="coeffs1">Coefficients (comma-separated):</label>
-        <input type="text" name="coeffs1" id="coeffs1" required><br>
-
-        <label for="sign1">Sign (<=, >=, =):</label>
-        <input type="text" name="sign1" id="sign1" required><br>
-
-        <label for="rhs1">Right-hand side:</label>
-        <input type="number" name="rhs1" id="rhs1" required><br><br>
-
-        <!-- Restricción 2 -->
-        <h3>Constraint 2</h3>
-        <label for="coeffs2">Coefficients (comma-separated):</label>
-        <input type="text" name="coeffs2" id="coeffs2" required><br>
-
-        <label for="sign2">Sign (<=, >=, =):</label>
-        <input type="text" name="sign2" id="sign2" required><br>
-
-        <label for="rhs2">Right-hand side:</label>
-        <input type="number" name="rhs2" id="rhs2" required><br><br>
+        <button type="button" id="addConstraintBtn">Add Constraint</button><br><br>
 
         <button type="submit">Solve</button>
     </form>
+
+    <button type="reset" onclick="clearForm()">Clear</button><br><br>
 
     <!-- Mostrar resultados si están disponibles -->
     <div id="solutionResult"></div>
 
     <script>
+    let constraintCount = 0;
+
+    // Función para agregar una nueva restricción dinámica
+    document.getElementById('addConstraintBtn').addEventListener('click', function() {
+        constraintCount++;
+
+        const constraintsContainer = document.getElementById('constraints');
+        
+        // Crear un nuevo contenedor para la restricción
+        const newConstraint = document.createElement('div');
+        newConstraint.classList.add('constraint');
+        newConstraint.id = `constraint${constraintCount}`;
+        
+        newConstraint.innerHTML = `
+            <h3>Constraint ${constraintCount}</h3>
+            
+            <!-- Número de coeficientes por restricción -->
+            <label for="numCoefficients${constraintCount}">Number of Coefficients:</label>
+            <input type="number" name="numCoefficients${constraintCount}" id="numCoefficients${constraintCount}" value="2" min="1"><br><br>
+
+            <div id="coeffsContainer${constraintCount}">
+                <!-- Aquí se agregarán los coeficientes dinámicamente -->
+            </div>
+            
+            <label for="sign${constraintCount}">Sign (<=, >=, =):</label>
+            <input type="text" name="sign${constraintCount}" id="sign${constraintCount}" required><br><br>
+
+            <label for="rhs${constraintCount}">Right-hand side:</label>
+            <input type="number" name="rhs${constraintCount}" id="rhs${constraintCount}" required><br><br>
+
+            <button type="button" id="generateCoeffsBtn${constraintCount}">Generate Coefficients</button><br><br>
+        `;
+
+        constraintsContainer.appendChild(newConstraint);
+
+        // Agregar funcionalidad para generar los coeficientes dinámicamente
+        document.getElementById(`generateCoeffsBtn${constraintCount}`).addEventListener('click', function() {
+            const numCoeffs = document.getElementById(`numCoefficients${constraintCount}`).value;
+            const coeffsContainer = document.getElementById(`coeffsContainer${constraintCount}`);
+            
+            // Limpiar los coeficientes previos
+            coeffsContainer.innerHTML = '';
+
+            // Generar los campos de coeficientes según el número seleccionado
+            for (let i = 1; i <= numCoeffs; i++) {
+                coeffsContainer.innerHTML += `
+                    <label for="coeffs${constraintCount}_${i}">Coefficient x${i}:</label>
+                    <input type="text" name="coeffs${constraintCount}_${i}" id="coeffs${constraintCount}_${i}" required><br><br>
+                `;
+            }
+        });
+    });
+
+    // Función para enviar el formulario
     document.getElementById('linearForm').addEventListener('submit', function(event) {
         event.preventDefault();
 
         const data = {
+            method: document.getElementById('method').value,
             objective: document.getElementById('objective').value,
             variables: document.getElementById('variables').value.split(','),
             objective_coeffs: document.getElementById('objective_coeffs').value.split(',').map(Number),
-            constraints: [
-                {
-                    coeffs: document.getElementById('coeffs1').value.split(',').map(Number),
-                    sign: document.getElementById('sign1').value,
-                    rhs: Number(document.getElementById('rhs1').value)
-                },
-                {
-                    coeffs: document.getElementById('coeffs2').value.split(',').map(Number),
-                    sign: document.getElementById('sign2').value,
-                    rhs: Number(document.getElementById('rhs2').value)
-                }
-            ]
+            constraints: []
         };
+
+        // Recoger los datos de cada restricción
+        for (let i = 1; i <= constraintCount; i++) {
+            const constraintData = {
+                coeffs: [],
+                sign: document.getElementById(`sign${i}`).value,
+                rhs: Number(document.getElementById(`rhs${i}`).value)
+            };
+
+            const numCoefficients = document.getElementById(`numCoefficients${i}`).value;
+            for (let j = 1; j <= numCoefficients; j++) {
+                constraintData.coeffs.push(Number(document.getElementById(`coeffs${i}_${j}`).value));
+            }
+
+            data.constraints.push(constraintData);
+        }
 
         // Realizamos la solicitud fetch para resolver el problema
         fetch('http://127.0.0.1:5000/solve_linear', {
@@ -115,6 +178,14 @@
             document.getElementById('solutionResult').innerHTML = 'Error solving the linear programming problem.';
         });
     });
+
+    // Función para limpiar el formulario
+    function clearForm() {
+        document.getElementById('linearForm').reset();
+        document.getElementById('constraints').innerHTML = '';
+        constraintCount = 0;
+        document.getElementById('solutionResult').innerHTML = '';
+    }
     </script>
 
 </body>

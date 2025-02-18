@@ -1,15 +1,12 @@
 from flask import Flask, request, jsonify,render_template
 from controllers.linear_solver import linear_solver_bp
-from controllers.transport_solver import transport_solver_bp
-from controllers.network_solver import network_solver_bp
 from models.linear_program import solve_linear_problem  # Importar la función que resuelve el problema lineal
 
 app = Flask(__name__)
 
+
 # Registrar Blueprints
 app.register_blueprint(linear_solver_bp)
-app.register_blueprint(transport_solver_bp)
-app.register_blueprint(network_solver_bp)
 
 @app.route('/')
 def index():
